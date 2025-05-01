@@ -2,9 +2,26 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const userModel = require('../models/userModel');
 
-// Normal User Signup
 exports.userSignup = async (req, res) => {
   const { name, email, password } = req.body;
+  
+  // Step 1: Check password length
+  if (password.length > 16) {
+    return res.status(400).json({
+      success: false,
+      message: 'Password should not exceed 16 characters.'
+    });
+  }
+
+  // Step 2: Validate password strength (min 8 chars + uppercase + lowercase + number + special char)
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,16}$/;
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Password must be 8-16 characters long and include at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character.'
+    });
+  }
+
   try {
     const existingUser = await userModel.getUserByEmail(email);
     if (existingUser) {
@@ -17,7 +34,7 @@ exports.userSignup = async (req, res) => {
     const token = jwt.sign(
       { user_id: newUser.user_id, email: newUser.email, role: newUser.role },
       process.env.JWT_SECRET || 'secret_key',
-      { expiresIn: '1h' }
+      { expiresIn: '30d' }
     );
 
     res.status(201).json({
@@ -26,13 +43,31 @@ exports.userSignup = async (req, res) => {
       token
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Something went wrong' });
+    res.status(500).json({ success: false, message: error });
   }
 };
 
 // Admin Signup
 exports.adminSignup = async (req, res) => {
   const { name, email, password } = req.body;
+
+  // Step 1: Check password length
+  if (password.length > 16) {
+    return res.status(400).json({
+      success: false,
+      message: 'Password should not exceed 16 characters.'
+    });
+  }
+
+  // Step 2: Validate password strength (min 8 chars + uppercase + lowercase + number + special char)
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,16}$/;
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Password must be 8-16 characters long and include at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character.'
+    });
+  }
+
   try {
     const existingUser = await userModel.getUserByEmail(email);
     if (existingUser) {
@@ -57,6 +92,7 @@ exports.adminSignup = async (req, res) => {
     res.status(500).json({ success: false, message: 'Something went wrong' });
   }
 };
+
 
 // User Login
 exports.loginUser = async (req, res) => {
