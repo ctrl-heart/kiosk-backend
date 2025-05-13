@@ -11,6 +11,7 @@ const getAllEvents = async (skip = 0, limit = 10) => {
       e.time, 
       e.capacity, 
       e.price, 
+      e.image_url, 
       c.name AS category_name
     FROM Events e
     JOIN Categories c ON e.category_id = c.category_id
@@ -36,6 +37,7 @@ const getTotalEventsCount = async () => {
         e.time, 
         e.capacity, 
         e.price, 
+        e.image_url, 
         c.name AS category_name
       FROM Events e
       JOIN Categories c ON e.category_id = c.category_id
