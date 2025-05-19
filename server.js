@@ -4,6 +4,7 @@ const cors = require("cors");
 const bodyParser = require('body-parser'); // for Stripe
 const Stripe = require('stripe');
 
+
 const app = express();
 const port = 5000;
 // Stripe setup
@@ -16,6 +17,7 @@ const eventsRoutes = require("./routes/eventsRoutes"); // Add events routes
 const categoryRoutes = require("./routes/categoryRoutes");
 const bookingRoutes = require('./routes/bookingRoutes');
 const guestRoutes = require('./routes/guestRoutes');
+const qrRoutes = require('./routes/qrRoutes');
 
 // Middleware
 app.use(cors());
@@ -29,6 +31,7 @@ app.use("/api", eventsRoutes); // Add events routes
 app.use("/api", categoryRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/guest-booking', guestRoutes);
+app.use('/api', qrRoutes);
 
 
 
