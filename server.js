@@ -79,7 +79,7 @@ app.use((req, res) => {
   });
 });
 
-// Start Server
-app.listen(port, () => {
-  console.log(`Auth-only server running at http://localhost:${port}`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Auth-only server running at http://192.168.18.10:5000`);
 });
+
