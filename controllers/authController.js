@@ -106,3 +106,69 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ success: false, message: "Something went wrong" });
   }
 };
+
+// normal user name change
+
+exports.updateUserName = async (req, res) => {
+  const { name } = req.body;
+  const user_id = req.user.user_id;
+
+  if (!name) {
+    return res.status(400).json({ success: false, message: "Name is required" });
+  }
+
+  try {
+    const updatedUser = await userModel.updateUserName(user_id, name);
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Name updated successfully",
+      user: {
+        user_id: updatedUser.user_id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        created_at: updatedUser.created_at,
+        role: updatedUser.role
+      }
+    });
+  } catch (error) {
+    console.error("Error updating name:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+
+// admin name change
+exports.updateAdminName = async (req, res) => {
+  const { name } = req.body;
+  const userId = req.user.user_id;
+
+  if (!name) {
+    return res.status(400).json({ success: false, message: 'Name is required' });
+  }
+
+  try {
+    const updatedUser = await userModel.updateUserNameById(userId, name);
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.status(200).json({
+      success: true,
+      message: 'Name updated successfully',
+      user: {
+        user_id: updatedUser.user_id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        created_at:updatedUser.created_at,
+        role: updatedUser.role,
+
+      },
+    });
+  } catch (error) {
+    console.error('Error updating name:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};

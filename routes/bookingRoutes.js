@@ -9,10 +9,12 @@ router.post("/", bookingController.createBooking);
 router.get("/", bookingController.getAllBookings);
 
 // Get booking by ID
-router.get("/:id", bookingController.getBookingById);
+// router.get("/:id", bookingController.getBookingById);
 
 // Delete booking
 router.delete("/:id", bookingController.deleteBooking);
+
+router.get('/user/:user_id/events', bookingController.getBookingsByUserId);
 
 module.exports = router;
 

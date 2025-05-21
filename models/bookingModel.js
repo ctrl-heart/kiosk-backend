@@ -36,7 +36,7 @@ const getAllBookings = async () => {
   return result.rows;
 };
 
-const getBookingById = async (id) => {
+const getBookingsByUserId = async (id) => {
   const result = await pool.query(
     `SELECT * FROM bookings WHERE booking_id = $1`,
     [id]
@@ -64,7 +64,7 @@ module.exports = {
   createBooking,
   getEventById,
   getAllBookings,
-  getBookingById,
+  getBookingsByUserId,
   deleteBooking,
   findBookingByUserAndEvent,
 };
