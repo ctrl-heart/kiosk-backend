@@ -5,13 +5,11 @@ const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
 
+
 const createBooking = async (req, res) => {
   try {
     const { event_id, user_id } = req.body;
-    console.log("event_id received:", event_id);
-    console.log("user_id received:", user_id);
-
-    // ✅ A. Validate user_id exists
+    // --- VALIDATIONS (keep your existing validation code) ---
     const userCheck = await pool.query(
       "SELECT * FROM users WHERE user_id = $1",
       [user_id]
@@ -23,7 +21,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // ✅ B. Validate event_id exists
     const eventCheck = await pool.query(
       "SELECT * FROM events WHERE event_id = $1",
       [event_id]
@@ -35,12 +32,10 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // ✅ 1. Check if user already booked this event
     const existing = await pool.query(
       "SELECT * FROM bookings WHERE event_id = $1 AND user_id = $2",
       [event_id, user_id]
     );
-
     if (existing.rows.length > 0) {
       return res.status(200).json({
         success: false,
@@ -48,17 +43,14 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // ✅ 2. Create booking
     const booking = await Booking.createBooking(event_id, user_id);
 
-    // ✅ 3. Fetch user info (without user_id)
     const userResult = await pool.query(
       "SELECT name, email FROM users WHERE user_id = $1",
       [user_id]
     );
     const user = userResult.rows[0];
 
-    // ✅ 4. Fetch event info (without event_id)
     const eventResult = await pool.query(
       `SELECT title, description, location, time, capacity, price, category_id 
        FROM events WHERE event_id = $1`,
@@ -66,84 +58,136 @@ const createBooking = async (req, res) => {
     );
     const event = eventResult.rows[0];
 
-    // ✅ 5. Fetch category name using category_id
     const categoryResult = await pool.query(
       "SELECT name FROM categories WHERE category_id = $1",
       [event.category_id]
     );
     const category = categoryResult.rows[0];
 
-    // ✅ 6. Generate PDF
-    const doc = new PDFDocument();
+    // --- START PDF GENERATION ---
+    const doc = new PDFDocument({
+      size: 'A4',
+      margins: { top: 40, left: 30, right: 30, bottom: 40 },
+      autoFirstPage: false,
+    });
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      "inline; filename=booking_confirmation.pdf"
-    );
+    res.setHeader("Content-Disposition", "inline; filename=booking_confirmation.pdf");
     doc.pipe(res);
 
-    // ➕ Add logo
-    const logoPath = path.resolve(__dirname, "../assets/logo_clean.png");
-    if (fs.existsSync(logoPath)) {
-      doc.image(logoPath, 50, 30, { width: 100 });
-    }
+    doc.addPage();
 
-    doc.moveDown(5);
-    doc.fontSize(20).text("Booking Confirmation", { underline: true });
-    doc.moveDown();
+    // 1. TOP PURPLE BANNER
+    const bannerHeight = 110;
+    doc.rect(0, 0, doc.page.width, bannerHeight).fill('#A259FF');
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(26)
+      .fillColor('#fff')
+      .text(event.title || 'Event Title', 45, 35, { align: 'left' });
+    doc
+      .font('Helvetica')
+      .fontSize(14)
+      .fillColor('#fff')
+      .text(
+        `${new Date(event.time).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} • ${event.location}`,
+        45, 75, { align: 'left' }
+      );
 
-    const bookingDate = new Date(booking.created_at);
-    const dateStr = bookingDate.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-    const timeStr = bookingDate.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    // 2. RECEIPT NUMBER
+    const ticketCode = `TIS${event_id}-${booking.booking_id || '1234'}-${user.name?.split(' ')[0]?.charAt(0).toUpperCase() || 'X'}${user.name?.split(' ')[1]?.charAt(0).toUpperCase() || 'D'}`;
+    doc
+      .font('Helvetica')
+      .fontSize(12)
+      .fillColor('#7D8790')
+      .text(`Receipt #${ticketCode}`, 0, bannerHeight + 18, { align: 'right' });
 
-    doc.fontSize(14).text(`Booking Date: ${dateStr}`);
-    doc.text(`Booking Time: ${timeStr}`);
-    doc.moveDown();
+    // 3. ATTENDEE INFO BOX
+    const boxTop = bannerHeight + 40;
+    const boxLeft = 40;
+    const boxWidth = doc.page.width - 80;
+    const boxHeight = 150;
+    doc
+      .roundedRect(boxLeft, boxTop, boxWidth, boxHeight, 16)
+      .fillAndStroke('#F5F7FA', '#E5E9F2');
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(16)
+      .fillColor('#232E38')
+      .text('Attendee Information', boxLeft + 14, boxTop + 14);
 
-    doc.fontSize(16).text("User Info", { underline: true });
-    doc.fontSize(14).text(`Name: ${user.name}`);
-    doc.text(`Email: ${user.email}`);
-    doc.moveDown();
+    const infoStartY = boxTop + 42;
+    doc.font('Helvetica').fontSize(12).fillColor('#596573');
+    doc.text('Name', boxLeft + 20, infoStartY);
+    doc.text('Email', boxLeft + 20, infoStartY + 22);
+    doc.text('Date', boxLeft + 20, infoStartY + 44);
+    doc.text('Location', boxLeft + 20, infoStartY + 66);
+    doc.text('Time', boxLeft + 20, infoStartY + 88);
 
-    doc.fontSize(16).text("Event Info", { underline: true });
-    doc.fontSize(14).text(`Title: ${event.title}`);
-    doc.text(`Description: ${event.description}`);
-    doc.text(`Location: ${event.location}`);
+    doc.font('Helvetica-Bold').fillColor('#232E38')
+      .text(user.name, boxLeft + 110, infoStartY)
+      .text(user.email, boxLeft + 110, infoStartY + 22)
+      .text(
+        new Date(event.time).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        boxLeft + 110, infoStartY + 44
+      )
+      .text(event.location, boxLeft + 110, infoStartY + 66, { width: boxWidth - 150 })
+      // .text('09:00 - 17:00', boxLeft + 110, infoStartY + 88);
+      // Start time from DB
+const startTime = new Date(event.time);
 
-    const eventTime = new Date(event.time);
-    const eventDateStr = eventTime.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-    const eventTimeStr = eventTime.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+// End time = startTime + 4 hours
+const endTime = new Date(startTime.getTime() + 4 * 60 * 60 * 1000);
 
-    doc.text(`Time: ${eventDateStr} ${eventTimeStr}`);
-    doc.text(`Capacity: ${event.capacity}`);
-    doc.text(`Price: $${event.price}`);
+// Format both times in UK timezone (Europe/London)
+const startTimeStr = startTime.toLocaleTimeString('en-US', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+  timeZone: 'Europe/London'
+});
 
-    doc.fontSize(16).text("Category Info", { underline: true });
-    doc.text(`Category name: ${category.name}`);
-    doc.moveDown();
+const endTimeStr = endTime.toLocaleTimeString('en-US', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+  timeZone: 'Europe/London'
+});
 
-    // ➕ Add barcode
+// Print in PDF
+doc.text(`${startTimeStr} - ${endTimeStr}`, boxLeft + 110, infoStartY + 88);
+
+
+    // 4. PRICE DETAILS
+    const priceTop = boxTop + boxHeight + 30;
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(16)
+      .fillColor('#232E38')
+      .text('Price Details', boxLeft, priceTop);
+
+    doc
+      .font('Helvetica')
+      .fontSize(13)
+      .fillColor('#596573')
+      .text('Ticket Price', boxLeft, priceTop + 22)
+      .font('Helvetica-Bold')
+      .fillColor('#232E38')
+      .text(`$${Number(event.price).toFixed(2)}`, doc.page.width - boxLeft - 90, priceTop + 22);
+
+    // 5. BARCODE
+    const barcodeY = priceTop + 60;
     const barcodePath = path.resolve(__dirname, "../assets/barcode_clean.png");
     if (fs.existsSync(barcodePath)) {
-      const pageHeight = doc.page.height;
-      const pageWidth = doc.page.width;
-      doc.image(barcodePath, pageWidth - 130, pageHeight - 110, { width: 100 });
+      doc.image(barcodePath, doc.page.width / 2 - 50, barcodeY, { width: 100 });
+    } else {
+      doc.font('Helvetica').fontSize(12).fillColor('#7D8790')
+        .text('Barcode', doc.page.width / 2 - 30, barcodeY + 40);
     }
+
+    // 6. FOOTER TICKET CODE
+    doc.font('Helvetica').fontSize(13).fillColor('#A4AAB3')
+      .text(ticketCode, 0, doc.page.height - 55, { align: 'center' });
 
     doc.end();
   } catch (error) {
@@ -153,6 +197,11 @@ const createBooking = async (req, res) => {
       .json({ error: "Failed to create booking and generate PDF" });
   }
 };
+
+module.exports = { createBooking };
+
+
+// 
 
 const getAllBookings = async (req, res) => {
   try {

@@ -5,9 +5,6 @@ const userModel = require("../models/userModel");
 // Normal User Signup
 exports.userSignup = async (req, res) => {
   const { name, email, password } = req.body;
-  console.log(name);
-  console.log(email);
-  console.log(password);
   try {
     const existingUser = await userModel.getUserByEmail(email);
     if (existingUser) {
@@ -17,17 +14,12 @@ exports.userSignup = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    console.log(name);
-    console.log(email);
-    console.log(password);
     const newUser = await userModel.createUser({
       name,
       email,
       password: hashedPassword,
       role: "user",
     });
-
-    console.log("newUser: ", newUser);
 
     const token = jwt.sign(
       { user_id: newUser.user_id, email: newUser.email, role: newUser.role },
@@ -178,5 +170,36 @@ exports.updateAdminName = async (req, res) => {
   } catch (error) {
     console.error('Error updating name:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// update adminpassword
+
+exports.changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const userId = req.user.user_id;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Current and new passwords are required' });
+  }
+
+  try {
+    const user = await userModel.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await userModel.updateUserPassword(userId, hashedPassword);
+
+    res.status(200).json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Error updating password:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -19,6 +19,9 @@ router.put('/update-name', authenticate, authController.updateUserName);
 
 router.put('/admin/update-name', authenticate, authController.updateAdminName);
 
+// admin change password
+router.put('/change-password', authenticate, authController.changePassword);
+
 
 
 module.exports = router;
