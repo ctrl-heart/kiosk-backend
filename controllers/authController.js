@@ -5,6 +5,9 @@ const userModel = require("../models/userModel");
 // Normal User Signup
 exports.userSignup = async (req, res) => {
   const { name, email, password } = req.body;
+  console.log(name);
+  console.log(email);
+  console.log(password);
   try {
     const existingUser = await userModel.getUserByEmail(email);
     if (existingUser) {
@@ -14,12 +17,17 @@ exports.userSignup = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    console.log(name);
+    console.log(email);
+    console.log(password);
     const newUser = await userModel.createUser({
       name,
       email,
       password: hashedPassword,
       role: "user",
     });
+
+    console.log("newUser: ", newUser);
 
     const token = jwt.sign(
       { user_id: newUser.user_id, email: newUser.email, role: newUser.role },

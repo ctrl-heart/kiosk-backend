@@ -14,7 +14,8 @@ router.get("/", bookingController.getAllBookings);
 // Delete booking
 router.delete("/:id", bookingController.deleteBooking);
 
-router.get('/user/:user_id/events', bookingController.getBookingsByUserId);
+router.post("/user", bookingController.getBookingByUserAndEvent);
+
+router.get("/user/events/:user_id", bookingController.getBookingsByUserId);
 
 module.exports = router;
-

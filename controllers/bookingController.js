@@ -5,7 +5,6 @@ const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
 
-
 const createBooking = async (req, res) => {
   try {
     const { event_id, user_id } = req.body;
@@ -13,28 +12,28 @@ const createBooking = async (req, res) => {
     console.log("user_id received:", user_id);
 
     // ✅ A. Validate user_id exists
-const userCheck = await pool.query(
-  "SELECT * FROM users WHERE user_id = $1",
-  [user_id]
-);
-if (userCheck.rows.length === 0) {
-  return res.status(200).json({
-    success: false,
-    message: "user_id does not exist"
-  });
-}
+    const userCheck = await pool.query(
+      "SELECT * FROM users WHERE user_id = $1",
+      [user_id]
+    );
+    if (userCheck.rows.length === 0) {
+      return res.status(200).json({
+        success: false,
+        message: "user_id does not exist",
+      });
+    }
 
-// ✅ B. Validate event_id exists
-const eventCheck = await pool.query(
-  "SELECT * FROM events WHERE event_id = $1",
-  [event_id]
-);
-if (eventCheck.rows.length === 0) {
-  return res.status(200).json({
-    success: false,
-    message: "event_id does not exist"
-  });
-}
+    // ✅ B. Validate event_id exists
+    const eventCheck = await pool.query(
+      "SELECT * FROM events WHERE event_id = $1",
+      [event_id]
+    );
+    if (eventCheck.rows.length === 0) {
+      return res.status(200).json({
+        success: false,
+        message: "event_id does not exist",
+      });
+    }
 
     // ✅ 1. Check if user already booked this event
     const existing = await pool.query(
@@ -45,7 +44,7 @@ if (eventCheck.rows.length === 0) {
     if (existing.rows.length > 0) {
       return res.status(200).json({
         success: false,
-        message: "User already registered for this event"
+        message: "User already registered for this event",
       });
     }
 
@@ -78,7 +77,10 @@ if (eventCheck.rows.length === 0) {
     const doc = new PDFDocument();
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "inline; filename=booking_confirmation.pdf");
+    res.setHeader(
+      "Content-Disposition",
+      "inline; filename=booking_confirmation.pdf"
+    );
     doc.pipe(res);
 
     // ➕ Add logo
@@ -93,10 +95,13 @@ if (eventCheck.rows.length === 0) {
 
     const bookingDate = new Date(booking.created_at);
     const dateStr = bookingDate.toLocaleDateString("en-GB", {
-      day: "2-digit", month: "long", year: "numeric"
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
     });
     const timeStr = bookingDate.toLocaleTimeString("en-US", {
-      hour: "2-digit", minute: "2-digit"
+      hour: "2-digit",
+      minute: "2-digit",
     });
 
     doc.fontSize(14).text(`Booking Date: ${dateStr}`);
@@ -115,10 +120,13 @@ if (eventCheck.rows.length === 0) {
 
     const eventTime = new Date(event.time);
     const eventDateStr = eventTime.toLocaleDateString("en-GB", {
-      day: "2-digit", month: "long", year: "numeric"
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
     });
     const eventTimeStr = eventTime.toLocaleTimeString("en-US", {
-      hour: "2-digit", minute: "2-digit"
+      hour: "2-digit",
+      minute: "2-digit",
     });
 
     doc.text(`Time: ${eventDateStr} ${eventTimeStr}`);
@@ -138,15 +146,13 @@ if (eventCheck.rows.length === 0) {
     }
 
     doc.end();
-
   } catch (error) {
     console.error("Error creating booking and generating PDF:", error);
-    res.status(500).json({ error: "Failed to create booking and generate PDF" });
+    res
+      .status(500)
+      .json({ error: "Failed to create booking and generate PDF" });
   }
 };
-
-
-
 
 const getAllBookings = async (req, res) => {
   try {
@@ -223,9 +229,45 @@ const deleteBooking = async (req, res) => {
   }
 };
 
+const getBookingByUserAndEvent = async (req, res) => {
+  try {
+    const { user_id, event_id } = req.body;
+
+    // Validate inputs
+    if (!user_id || !event_id) {
+      return res.status(400).json({
+        success: false,
+        message: "user_id and event_id are required",
+      });
+    }
+
+    const existingBooking = await pool.query(
+      "SELECT * FROM bookings WHERE user_id = $1 AND event_id = $2",
+      [user_id, event_id]
+    );
+
+    if (existingBooking.rows.length > 0) {
+      return res.status(200).json({
+        success: true,
+        booking: existingBooking.rows[0],
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        booking: null,
+        message: "No booking found for this user and event",
+      });
+    }
+  } catch (error) {
+    console.error("Error checking booking existence:", error);
+    res.status(500).json({ error: "Failed to check booking" });
+  }
+};
+
 module.exports = {
   createBooking,
   getAllBookings,
   getBookingsByUserId,
   deleteBooking,
+  getBookingByUserAndEvent,
 };
