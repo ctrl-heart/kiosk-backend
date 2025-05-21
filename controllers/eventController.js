@@ -24,9 +24,11 @@ const getAllEvents = async (req, res) => {
       e.capacity, 
       e.price, 
       e.image_url, 
-      c.name AS category_name
+      c.name AS category_name,
+      COUNT(b.booking_id) AS registered
     FROM events e
     JOIN categories c ON e.category_id = c.category_id
+    LEFT JOIN bookings b ON e.event_id = b.event_id
   `;
 
   let conditions = [];
@@ -64,8 +66,10 @@ const getAllEvents = async (req, res) => {
     query += ` WHERE ${conditions.join(" AND ")}`;
   }
 
-  // Get total (for filtered data, not full table)
-  const countQuery = `SELECT COUNT(*) FROM (${query}) AS filtered_events`;
+  query += ` GROUP BY e.event_id, c.name`;
+
+  // Get total (for filtered + grouped data)
+  const countQuery = `SELECT COUNT(*) FROM (${query}) AS grouped_events`;
   const totalResult = await pool.query(countQuery, values);
   const total = parseInt(totalResult.rows[0].count);
 
@@ -118,51 +122,47 @@ const updateEvent = async (req, res) => {
     if (!updatedEvent) {
       return res.status(404).json({
         success: false,
-        message: "Event not found or not updated"
+        message: "Event not found or not updated",
       });
     }
     delete updatedEvent.updated_at;
     res.status(200).json({
       success: true,
       message: "Event updated successfully",
-      data: updatedEvent
+      data: updatedEvent,
     });
   } catch (error) {
-    console.error('Update Error:', error.message);
+    console.error("Update Error:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to update event",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-
-
-
 const deleteEvent = async (req, res) => {
   try {
-      const event = await Event.deleteEvent(req.params.id);
-      if (event) {
-          res.status(200).json({
-            success: true,
-            message: 'Event deleted successfully'
-          });
-      } else {
-          res.status(404).json({
-            success: false,
-            message: 'Event not found'
-          });
-      }
-  } catch (error) {
-      console.error("Delete Error:", error);
-      res.status(500).json({
-        success: false,
-        message: 'Something went wrong!'
+    const event = await Event.deleteEvent(req.params.id);
+    if (event) {
+      res.status(200).json({
+        success: true,
+        message: "Event deleted successfully",
       });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
+    }
+  } catch (error) {
+    console.error("Delete Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong!",
+    });
   }
 };
-
 
 const getEventAttendees = async (req, res) => {
   const { event_id } = req.params;
@@ -173,10 +173,10 @@ const getEventAttendees = async (req, res) => {
       attendees,
     });
   } catch (error) {
-    console.error('Error fetching attendees:', error);
+    console.error("Error fetching attendees:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch attendees',
+      message: "Failed to fetch attendees",
     });
   }
 };
@@ -191,12 +191,15 @@ const createEvent = async (req, res) => {
     res.status(201).json(eventWithoutTimestamps);
   } catch (error) {
     console.error("Update Error:", error);
-    res.status(500).json({ error: 'Something went wrong!' });
+    res.status(500).json({ error: "Something went wrong!" });
   }
 };
 
-
-
-
-
-module.exports = { getAllEvents, getEventById,updateEvent,deleteEvent,getEventAttendees,createEvent };
+module.exports = {
+  getAllEvents,
+  getEventById,
+  updateEvent,
+  deleteEvent,
+  getEventAttendees,
+  createEvent,
+};
