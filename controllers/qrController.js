@@ -2,7 +2,7 @@ const QRCode = require('qrcode');
 
 exports.generateQR = async (req, res) => {
   try {
-    const { link, event_id, event_name, date, seat_left, location } = req.body;
+    const { link, event_id, event_name, date, seat_left, location, cost } = req.body;
 
     // 🔍 Validate basic required fields
     if (!link || typeof link !== 'string') {
@@ -23,6 +23,8 @@ exports.generateQR = async (req, res) => {
     url.searchParams.set('date', date);
     url.searchParams.set('seat_left', seat_left);
     url.searchParams.set('location', location);
+    url.searchParams.set('cost', cost);
+
 
     const fullURL = url.toString();
 

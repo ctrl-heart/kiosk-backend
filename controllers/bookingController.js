@@ -157,18 +157,58 @@ const getAllBookings = async (req, res) => {
   }
 };
 
-const getBookingById = async (req, res) => {
+const getBookingsByUserId = async (req, res) => {
   try {
-    const id = req.params.id;
-    const booking = await Booking.getBookingById(id);
-    if (!booking) {
-      return res.status(404).json({ error: "Booking not found" });
+    const { user_id } = req.params;
+
+    // Check if user exists
+    const userResult = await pool.query("SELECT * FROM users WHERE user_id = $1", [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
     }
-    res.status(200).json(booking);
+
+    // Join bookings with events
+    const result = await pool.query(
+      `
+      SELECT 
+        e.event_id,
+        e.title,
+        e.description,
+        e.location,
+        e.time,
+        e.price,
+        b.created_at AS booking_time
+      FROM bookings b
+      JOIN events e ON b.event_id = e.event_id
+      WHERE b.user_id = $1
+      ORDER BY b.created_at DESC
+      `,
+      [user_id]
+    );
+
+    res.status(200).json({
+      success: true,
+      user_id,
+      total_events: result.rows.length,
+      events: result.rows
+    });
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch booking" });
+    console.error("Error fetching bookings by user:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch user bookings" });
   }
 };
+// const getBookingById = async (req, res) => {
+//   try {
+//     const id = req.params.id;
+//     const booking = await Booking.getBookingById(id);
+//     if (!booking) {
+//       return res.status(404).json({ error: "Booking not found" });
+//     }
+//     res.status(200).json(booking);
+//   } catch (error) {
+//     res.status(500).json({ error: "Failed to fetch booking" });
+//   }
+// };
 
 const deleteBooking = async (req, res) => {
   try {
@@ -186,6 +226,6 @@ const deleteBooking = async (req, res) => {
 module.exports = {
   createBooking,
   getAllBookings,
-  getBookingById,
+  getBookingsByUserId,
   deleteBooking,
 };

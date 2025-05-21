@@ -28,6 +28,27 @@ const getUserByEmail = async (email) => {
   const result = await pool.query(query, [email]);
   return result.rows[0];
 };
+// normal username change
+const updateUserName = async (user_id, name) => {
+  const result = await pool.query(
+    'UPDATE users SET name = $1, updated_at = NOW() WHERE user_id = $2 RETURNING user_id, name, email, created_at, role',
+    [name, user_id]
+  );
+  return result.rows[0];
+};
+
+// admin username change
+const updateUserNameById = async (userId, newName) => {
+  const result = await pool.query(
+    'UPDATE users SET name = $1, updated_at = NOW() WHERE user_id = $2 RETURNING *',
+    [newName, userId]
+  );
+  return result.rows[0];
+};
+
+
+
+
 
 
 
@@ -35,5 +56,8 @@ module.exports = {
   createGuestUser,
   findUserByEmail,
   getUserByEmail, // ✅ Now this will work
-  createUser
+  createUser,
+  updateUserName,
+  updateUserNameById,
+  
 };

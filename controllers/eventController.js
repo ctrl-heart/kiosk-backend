@@ -108,4 +108,95 @@ const getEventById = async (req, res) => {
   }
 };
 
-module.exports = { getAllEvents, getEventById };
+const updateEvent = async (req, res) => {
+  try {
+    const event_id = req.params.id;
+    const eventData = req.body;
+
+    const updatedEvent = await Event.updateEventById(event_id, eventData); // ✅ renamed function call
+
+    if (!updatedEvent) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found or not updated"
+      });
+    }
+    delete updatedEvent.updated_at;
+    res.status(200).json({
+      success: true,
+      message: "Event updated successfully",
+      data: updatedEvent
+    });
+  } catch (error) {
+    console.error('Update Error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update event",
+      error: error.message
+    });
+  }
+};
+
+
+
+
+const deleteEvent = async (req, res) => {
+  try {
+      const event = await Event.deleteEvent(req.params.id);
+      if (event) {
+          res.status(200).json({
+            success: true,
+            message: 'Event deleted successfully'
+          });
+      } else {
+          res.status(404).json({
+            success: false,
+            message: 'Event not found'
+          });
+      }
+  } catch (error) {
+      console.error("Delete Error:", error);
+      res.status(500).json({
+        success: false,
+        message: 'Something went wrong!'
+      });
+  }
+};
+
+
+const getEventAttendees = async (req, res) => {
+  const { event_id } = req.params;
+  try {
+    const attendees = await Event.getEventAttendees(event_id);
+    res.status(200).json({
+      success: true,
+      attendees,
+    });
+  } catch (error) {
+    console.error('Error fetching attendees:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch attendees',
+    });
+  }
+};
+
+const createEvent = async (req, res) => {
+  try {
+    const event = await Event.createEvent(req.body);
+
+    // Remove `created_at` and `updated_at` before sending response
+    const { created_at, updated_at, ...eventWithoutTimestamps } = event;
+
+    res.status(201).json(eventWithoutTimestamps);
+  } catch (error) {
+    console.error("Update Error:", error);
+    res.status(500).json({ error: 'Something went wrong!' });
+  }
+};
+
+
+
+
+
+module.exports = { getAllEvents, getEventById,updateEvent,deleteEvent,getEventAttendees,createEvent };
