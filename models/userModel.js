@@ -46,9 +46,14 @@ const updateUserNameById = async (userId, newName) => {
   return result.rows[0];
 };
 
+const getUserById = async (userId) => {
+  const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
+  return result.rows[0];
+};
 
-
-
+const updateUserPassword = async (userId, hashedPassword) => {
+  await pool.query('UPDATE users SET password = $1, updated_at = NOW() WHERE user_id = $2', [hashedPassword, userId]);
+};
 
 
 
@@ -59,5 +64,7 @@ module.exports = {
   createUser,
   updateUserName,
   updateUserNameById,
+  getUserById,
+  updateUserPassword,
   
 };
