@@ -165,7 +165,8 @@ const deleteEvent = async (req, res) => {
 };
 
 const getEventAttendees = async (req, res) => {
-  const { event_id } = req.params;
+  const { event_id } = req.query;
+
   try {
     const attendees = await Event.getEventAttendees(event_id);
     res.status(200).json({

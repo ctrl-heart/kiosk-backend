@@ -10,13 +10,13 @@ router.get("/events", eventController.getAllEvents);
 router.get("/events/:id", eventController.getEventById);
 
 // PUT update an event (Admin only)
-router.put('/events/:id', eventController.updateEvent);
+router.put("/events/:id", eventController.updateEvent);
 
-router.delete('/events/:id', eventController.deleteEvent);
+router.delete("/events/:id", eventController.deleteEvent);
 
-router.get('/:event_id/attendees', eventController.getEventAttendees);
+router.get("/attendees", eventController.getEventAttendees);
 
 // POST create a new event (Admin only)
-router.post('/events', eventController.createEvent);
+router.post("/events", eventController.createEvent);
 
 module.exports = router;

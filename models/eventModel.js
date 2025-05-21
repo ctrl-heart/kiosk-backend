@@ -1,8 +1,39 @@
 // models/eventModel.js
 const database = require("../database.js"); // Assume db.js file with pg-promise or pg setup
 
-const getAllEvents = async (skip = 0, limit = 10) => {
-  const query = `
+// const getAllEvents = async (skip = 0, limit = 10) => {
+//   const query = `
+//     SELECT
+//       e.event_id,
+//       e.title,
+//       e.description,
+//       e.location,
+//       e.time,
+//       e.capacity,
+//       e.price,
+//       e.image_url,
+//       c.name AS category_name
+//     FROM Events e
+//     JOIN Categories c ON e.category_id = c.category_id
+//     LIMIT $1 OFFSET $2
+//   `;
+//   const result = await database.query(query, [limit, skip]);
+//   return result.rows;
+// };
+
+const getAllEvents = async (req, res) => {
+  const {
+    search,
+    category_name,
+    start_date,
+    end_date,
+    price_min,
+    price_max,
+    skip = 0,
+    limit = 10,
+  } = req.query;
+
+  let baseQuery = `
     SELECT 
       e.event_id, 
       e.title, 
@@ -12,13 +43,85 @@ const getAllEvents = async (skip = 0, limit = 10) => {
       e.capacity, 
       e.price, 
       e.image_url, 
-      c.name AS category_name
-    FROM Events e
-    JOIN Categories c ON e.category_id = c.category_id
-    LIMIT $1 OFFSET $2
+      c.name AS category_name,
+      json_agg(
+        json_build_object(
+          'user_id', u.user_id,
+          'name', u.name,
+          'email', u.email,
+          'role', u.role,
+          'created_at', u.created_at
+        )
+      ) FILTER (WHERE u.user_id IS NOT NULL) AS attendees
+    FROM events e
+    JOIN categories c ON e.category_id = c.category_id
+    LEFT JOIN bookings b ON e.event_id = b.event_id
+    LEFT JOIN users u ON u.user_id = b.user_id
   `;
-  const result = await database.query(query, [limit, skip]);
-  return result.rows;
+
+  const values = [];
+  const conditions = [];
+
+  if (search) {
+    conditions.push(
+      `(e.title ILIKE $${values.length + 1} OR e.description ILIKE $${
+        values.length + 1
+      } OR e.location ILIKE $${values.length + 1})`
+    );
+    values.push(`%${search}%`);
+  }
+
+  if (category_name) {
+    conditions.push(`c.name ILIKE $${values.length + 1}`);
+    values.push(`%${category_name}%`);
+  }
+
+  if (start_date && end_date) {
+    conditions.push(
+      `DATE(e.time) BETWEEN $${values.length + 1} AND $${values.length + 2}`
+    );
+    values.push(start_date, end_date);
+  }
+
+  if (price_min && price_max) {
+    conditions.push(
+      `e.price BETWEEN $${values.length + 1} AND $${values.length + 2}`
+    );
+    values.push(price_min, price_max);
+  }
+
+  if (conditions.length > 0) {
+    baseQuery += ` WHERE ${conditions.join(" AND ")}`;
+  }
+
+  baseQuery += `
+    GROUP BY e.event_id, c.name
+    ORDER BY e.time ASC
+    LIMIT $${values.length + 1} OFFSET $${values.length + 2}
+  `;
+
+  values.push(parseInt(limit), parseInt(skip));
+
+  try {
+    const result = await pool.query(baseQuery, values);
+
+    // Remove null attendee arrays from empty events
+    const cleaned = result.rows.map((row) => ({
+      ...row,
+      attendees: row.attendees || [],
+    }));
+
+    res.status(200).json({
+      success: true,
+      results: cleaned,
+      total: cleaned.length,
+      skip: parseInt(skip),
+      limit: parseInt(limit),
+    });
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
 };
 
 const getTotalEventsCount = async () => {
@@ -81,22 +184,39 @@ const deleteEvent = async (event_id) => {
 };
 
 const getEventAttendees = async (event_id) => {
-  const result = await database.query(
-    `SELECT 
-       u.user_id, 
-       u.name, 
-       u.email, 
-       u.role, 
-       u.created_at,
-       COUNT(b2.event_id) AS events_count
-     FROM bookings b
-     JOIN users u ON b.user_id = u.user_id
-     LEFT JOIN bookings b2 ON u.user_id = b2.user_id
-     WHERE b.event_id = $1
-     GROUP BY u.user_id, u.name,  u.email, u.role, u.created_at`,
-    [event_id]
-  );
-  return result.rows;
+  let query = `
+    SELECT 
+      u.user_id,
+      u.name,
+      u.email,
+      u.role,
+      u.created_at,
+      COUNT(DISTINCT b.event_id) AS events_count,
+      json_agg(
+        json_build_object(
+          'event_id', e.event_id,
+          'title', e.title,
+          'time', e.time,
+          'location', e.location,
+          'price', e.price
+        )
+      ) AS events
+    FROM users u
+    JOIN bookings b ON u.user_id = b.user_id
+    JOIN events e ON e.event_id = b.event_id
+  `;
+
+  const params = [];
+
+  if (event_id) {
+    query += ` WHERE b.event_id = $1`;
+    params.push(event_id);
+  }
+
+  query += ` GROUP BY u.user_id ORDER BY u.created_at DESC`;
+
+  const { rows } = await database.query(query, params);
+  return rows;
 };
 
 const createEvent = async (event) => {

@@ -3,6 +3,7 @@ require("dotenv").config();
 const cors = require("cors");
 const bodyParser = require("body-parser"); // for Stripe
 const Stripe = require("stripe");
+const db = require("./database");
 
 const app = express();
 const port = 5000;
@@ -29,8 +30,41 @@ app.use("/api", searchRoutes);
 app.use("/api", eventsRoutes); // Add events routes
 app.use("/api", categoryRoutes);
 app.use("/api/bookings", bookingRoutes);
-app.use("/guest-booking", guestRoutes);
+app.use("/api/guest-booking", guestRoutes);
 app.use("/api", qrRoutes);
+
+app.get("/api/admin/dashboard", async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        e.event_id,
+        e.title,
+        e.description,
+        e.location,
+        e.time,
+        e.capacity,
+        e.price,
+        e.image_url,
+        COUNT(b.booking_id) AS attendees
+      FROM events e
+      LEFT JOIN bookings b ON e.event_id = b.event_id
+      GROUP BY e.event_id
+      ORDER BY e.time ASC
+    `);
+
+    const events = result.rows.map((row) => ({
+      ...row,
+      attendees: parseInt(row.attendees),
+      isFree: parseFloat(row.price) === 0,
+      date: row.time,
+    }));
+
+    res.json({ success: true, events });
+  } catch (error) {
+    console.error("Error fetching dashboard events:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 // Stripe payment intent route
 app.post("/api/payments/create-payment-intent", async (req, res) => {
