@@ -210,7 +210,7 @@ exports.changePassword = async (req, res) => {
 // Normal User Password Change
 exports.changeUserPassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
-  const userId = req.user.user_id; // JWT middleware se milta hai
+  const userId = req.user.user_id; 
 
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ success: false, message: 'Current and new passwords are required' });
