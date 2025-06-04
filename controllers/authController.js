@@ -1,6 +1,8 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const userModel = require("../models/userModel");
+const userModel = require("../models/userModel.js");
+console.log("userModel keys:", Object.keys(userModel));
+
 
 // Normal User Signup
 exports.userSignup = async (req, res) => {
@@ -110,21 +112,18 @@ exports.loginUser = async (req, res) => {
 // normal user name change
 
 exports.updateUserName = async (req, res) => {
+  console.log("BODY RECEIVED:", req.body);
   const { name } = req.body;
   const user_id = req.user.user_id;
 
   if (!name) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Name is required" });
+    return res.status(400).json({ success: false, message: "Name is required" });
   }
 
   try {
     const updatedUser = await userModel.updateUserName(user_id, name);
     if (!updatedUser) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
     res.status(200).json({
       success: true,
@@ -134,14 +133,16 @@ exports.updateUserName = async (req, res) => {
         name: updatedUser.name,
         email: updatedUser.email,
         created_at: updatedUser.created_at,
-        role: updatedUser.role,
-      },
+        role: updatedUser.role
+      }
     });
   } catch (error) {
     console.error("Error updating name:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+
 
 // admin name change
 exports.updateAdminName = async (req, res) => {
@@ -149,72 +150,29 @@ exports.updateAdminName = async (req, res) => {
   const userId = req.user.user_id;
 
   if (!name) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Name is required" });
+    return res.status(400).json({ success: false, message: 'Name is required' });
   }
 
   try {
     const updatedUser = await userModel.updateUserNameById(userId, name);
     if (!updatedUser) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
     res.status(200).json({
       success: true,
-      message: "Name updated successfully",
+      message: 'Name updated successfully',
       user: {
         user_id: updatedUser.user_id,
         name: updatedUser.name,
         email: updatedUser.email,
-        created_at: updatedUser.created_at,
+        created_at:updatedUser.created_at,
         role: updatedUser.role,
+
       },
     });
   } catch (error) {
-    console.error("Error updating name:", error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-// Get User Details by ID
-exports.getUserById = async (req, res) => {
-  const { user_id } = req.params;
-
-  if (!user_id) {
-    return res.status(400).json({
-      success: false,
-      message: "User ID is required",
-    });
-  }
-
-  try {
-    const user = await userModel.getUserById(user_id);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "User details fetched successfully",
-      user: {
-        user_id: user.user_id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        created_at: user.created_at,
-      },
-    });
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    console.error('Error updating name:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -248,3 +206,35 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Normal User Password Change
+exports.changeUserPassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const userId = req.user.user_id; // JWT middleware se milta hai
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Current and new passwords are required' });
+  }
+
+  try {
+    const user = await userModel.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await userModel.updateUserPassword(userId, hashedPassword);
+
+    res.status(200).json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Error updating password:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+

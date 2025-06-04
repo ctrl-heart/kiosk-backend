@@ -1,3 +1,4 @@
+
 const pool = require("../database.js");
 
 // Create user
@@ -69,6 +70,5 @@ module.exports = {
   createUser,
   updateUserName,
   updateUserNameById,
-  getUserById,
   updateUserPassword,
 };
