@@ -13,7 +13,7 @@ router.post("/admin-signup", authController.adminSignup);
 router.post("/login", authController.loginUser);
 
 // Update user name
-router.put("/update-name", authController.updateUserName);
+router.put("/update-name",authenticate, authController.updateUserName);
 
 router.put("/admin/update-name", authenticate, authController.updateAdminName);
 
@@ -21,5 +21,11 @@ router.put("/admin/update-name", authenticate, authController.updateAdminName);
 router.put("/change-password", authenticate, authController.changePassword);
 
 router.get("/user/:user_id", authController.getUserById);
+
+// GET /users/:user_id/points
+router.get("/users/:user_id/points", authController.getUserPoints);
+
+// New route for redeem info
+router.get("/users/:user_id/redeem", authController.getUserRedeemInfo);
 
 module.exports = router;

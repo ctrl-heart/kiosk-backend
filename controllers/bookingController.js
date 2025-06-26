@@ -1,6 +1,5 @@
 const Booking = require("../models/bookingModel");
 const pool = require("../database.js");
-// controllers/bookingController.js
 const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
@@ -19,6 +18,7 @@ const createBooking = async (req, res) => {
         message: "user_id does not exist",
       });
     }
+    
 
     const eventCheck = await pool.query(
       "SELECT * FROM events WHERE event_id = $1",
@@ -43,9 +43,35 @@ const createBooking = async (req, res) => {
     }
 
     const booking = await Booking.createBooking(event_id, user_id);
+    // 👇 Add this line
+    // const updatedUser = await Booking.addPointsToUser(user_id, 10);
+    // Reward 10 points & reset redeem flags
+    const userData = userCheck.rows[0];
+    let userPoints = userData.points || 0;
+    let finalPrice = eventCheck.rows[0].price;
+    let discountUsed = 0;
+// 1️⃣ Apply discount if redeem is present
+if (userData.discount_percent > 0) {
+  discountUsed = userData.discount_percent;
+  finalPrice = finalPrice - (finalPrice * discountUsed) / 100;
+
+  // Reset discount_percent after use
+  await pool.query(
+    "UPDATE users SET discount_percent = 0, updated_at = NOW() WHERE user_id = $1",
+    [user_id]
+  );
+}
+
+// 2️⃣ Reward 10 points after every booking
+userPoints += 10;
+await pool.query(
+  "UPDATE users SET points = $1, updated_at = NOW() WHERE user_id = $2",
+  [userPoints, user_id]
+);    
+
 
     const userResult = await pool.query(
-      "SELECT name, email FROM users WHERE user_id = $1",
+      "SELECT name, email FROM users WHERE user_id = $1",  
       [user_id]
     );
     const user = userResult.rows[0];
@@ -341,6 +367,7 @@ const getBookingByUserAndEvent = async (req, res) => {
     res.status(500).json({ error: "Failed to check booking" });
   }
 };
+
 
 module.exports = {
   createBooking,
