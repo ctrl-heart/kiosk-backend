@@ -18,6 +18,7 @@ const categoryRoutes = require("./routes/categoryRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const guestRoutes = require("./routes/guestRoutes");
 const qrRoutes = require("./routes/qrRoutes");
+const redeemRoutes = require("./routes/redeemRoutes");
 
 // Middleware
 app.use(cors());
@@ -32,6 +33,7 @@ app.use("/api", categoryRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/guest-booking", guestRoutes);
 app.use("/api", qrRoutes);
+app.use("/api/redeem", redeemRoutes);
 
 app.get("/api/admin/dashboard", async (req, res) => {
   try {

@@ -61,6 +61,25 @@ const updateUserPassword = async (userId, hashedPassword) => {
   );
 };
 
+// Getuserpoints
+const getUserPoints = async (user_id) => {
+  const result = await pool.query(
+    "SELECT points FROM users WHERE user_id = $1",
+    [user_id]
+  );
+  return result.rows[0]; // { points: 50 } etc.
+};
+// GET USER REDEEM INFO
+
+const getUserRedeemInfo = async (user_id) => {
+  const result = await pool.query(
+    "SELECT discount_percent FROM users WHERE user_id = $1",
+    [user_id]
+  );
+  return result.rows[0]; // e.g. { discount_percent: 25 }
+};
+
+
 module.exports = {
   getUserById,
   createGuestUser,
@@ -71,4 +90,6 @@ module.exports = {
   updateUserNameById,
   getUserById,
   updateUserPassword,
+  getUserPoints,
+  getUserRedeemInfo,
 };

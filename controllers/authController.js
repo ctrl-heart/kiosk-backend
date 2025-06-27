@@ -248,3 +248,44 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// getuserpoints
+exports.getUserPoints = async (req, res) => {
+  const { user_id } = req.params;
+
+  try {
+    const user = await userModel.getUserPoints(user_id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      user_id,
+      points: user.points !== null ? user.points : null, // Don't convert null to 0
+    });
+  } catch (error) {
+    console.error("Error fetching user points:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+// GET USER REDEEM INFO
+exports.getUserRedeemInfo = async (req, res) => {
+  const { user_id } = req.params;
+
+  try {
+    const result = await userModel.getUserRedeemInfo(user_id);
+    if (!result) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      user_id,
+      discount_percent: result.discount_percent !== null ? result.discount_percent : null,
+    });
+  } catch (error) {
+    console.error("Error fetching redeem info:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};

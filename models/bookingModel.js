@@ -58,6 +58,17 @@ const findBookingByUserAndEvent = async (user_id, event_id) => {
   );
   return result.rows[0]; // returns booking if it exists, otherwise undefined
 };
+// Points add 
+const addPointsToUser = async (user_id, pointsToAdd = 10) => {
+  const result = await pool.query(
+    `UPDATE users
+       SET points = COALESCE(points, 0) + $1
+     WHERE user_id = $2 AND role = 'user'
+     RETURNING user_id, name, email, points`,
+    [pointsToAdd, user_id]
+  );
+  return result.rows[0]; 
+};
 
 
 module.exports = {
@@ -67,4 +78,5 @@ module.exports = {
   getBookingsByUserId,
   deleteBooking,
   findBookingByUserAndEvent,
+  addPointsToUser,
 };
