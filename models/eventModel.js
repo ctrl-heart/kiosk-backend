@@ -1,26 +1,6 @@
 // models/eventModel.js
 const database = require("../database.js"); // Assume db.js file with pg-promise or pg setup
 
-// const getAllEvents = async (skip = 0, limit = 10) => {
-//   const query = `
-//     SELECT
-//       e.event_id,
-//       e.title,
-//       e.description,
-//       e.location,
-//       e.time,
-//       e.capacity,
-//       e.price,
-//       e.image_url,
-//       c.name AS category_name
-//     FROM Events e
-//     JOIN Categories c ON e.category_id = c.category_id
-//     LIMIT $1 OFFSET $2
-//   `;
-//   const result = await database.query(query, [limit, skip]);
-//   return result.rows;
-// };
-
 const getAllEvents = async (req, res) => {
   const {
     search,
@@ -219,15 +199,31 @@ const getEventAttendees = async (event_id) => {
   return rows;
 };
 
+// const createEvent = async (event) => {
+//   const { title, description, location, time, capacity, price, category_id } =
+//     event;
+//   const result = await database.query(
+//     "INSERT INTO Events (title, description, location, time, capacity, price, category_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING *",
+//     [title, description, location, time, capacity, price, category_id]
+//   );
+//   return result.rows[0];
+// };
+
 const createEvent = async (event) => {
-  const { title, description, location, time, capacity, price, category_id } =
-    event;
+  const { title, description, location, time, capacity, price, category_id, image_url } = event;
   const result = await database.query(
-    "INSERT INTO Events (title, description, location, time, capacity, price, category_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING *",
-    [title, description, location, time, capacity, price, category_id]
+    "INSERT INTO Events (title, description, location, time, capacity, price, category_id, image_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING *",
+    [title, description, location, time, capacity, price, category_id, image_url]
   );
   return result.rows[0];
 };
+const getLatestEvent = async () => {
+  const result = await database.query(
+    "SELECT * FROM events ORDER BY event_id DESC LIMIT 1"
+  );
+  return result.rows[0];
+};
+
 
 module.exports = {
   getAllEvents,
@@ -237,4 +233,5 @@ module.exports = {
   deleteEvent,
   getEventAttendees,
   createEvent,
+  getLatestEvent
 };

@@ -182,19 +182,63 @@ const getEventAttendees = async (req, res) => {
   }
 };
 
+// const createEvent = async (req, res) => {
+//   try {
+//     const event = await Event.createEvent(req.body);
+
+//     // Remove `created_at` and `updated_at` before sending response
+//     const { created_at, updated_at, ...eventWithoutTimestamps } = event;
+
+//     res.status(201).json(eventWithoutTimestamps);
+//   } catch (error) {
+//     console.error("Update Error:", error);
+//     res.status(500).json({ error: "Something went wrong!" });
+//   }
+// };
+
 const createEvent = async (req, res) => {
   try {
-    const event = await Event.createEvent(req.body);
+    const { title, description, location, time, capacity, price, category_id } = req.body;
+    let image_url = null;
+    if (req.file) {
+      image_url = "/uploads/" + req.file.filename;
+    }
 
-    // Remove `created_at` and `updated_at` before sending response
+    const event = await Event.createEvent({
+      title,
+      description,
+      location,
+      time,
+      capacity,
+      price,
+      category_id,
+      image_url
+    });
+
+    // Remove created_at and updated_at from response (optional)
     const { created_at, updated_at, ...eventWithoutTimestamps } = event;
 
     res.status(201).json(eventWithoutTimestamps);
   } catch (error) {
-    console.error("Update Error:", error);
+    console.error("Create Event Error:", error);
     res.status(500).json({ error: "Something went wrong!" });
   }
 };
+
+const getLatestEvent = async (req, res) => {
+  try {
+    const latestEvent = await Event.getLatestEvent();
+    if (latestEvent) {
+      res.status(200).json(latestEvent);
+    } else {
+      res.status(404).json({ success: false, message: "No event found" });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
 
 module.exports = {
   getAllEvents,
@@ -203,4 +247,5 @@ module.exports = {
   deleteEvent,
   getEventAttendees,
   createEvent,
+  getLatestEvent
 };

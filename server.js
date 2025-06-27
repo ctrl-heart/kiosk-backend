@@ -34,6 +34,8 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/guest-booking", guestRoutes);
 app.use("/api", qrRoutes);
 app.use("/api/redeem", redeemRoutes);
+app.use('/uploads', express.static('uploads'));
+
 
 app.get("/api/admin/dashboard", async (req, res) => {
   try {
