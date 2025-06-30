@@ -26,7 +26,7 @@ router.get("/events/latest", eventController.getLatestEvent);
 router.get("/events/:id", eventController.getEventById);
 
 // PUT update an event (Admin only)
-router.put("/events/:id", eventController.updateEvent);
+router.put("/events/:id", upload.single("image"), eventController.updateEvent);
 
 router.delete("/events/:id", eventController.deleteEvent);
 

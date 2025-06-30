@@ -112,12 +112,47 @@ const getEventById = async (req, res) => {
   }
 };
 
+// const updateEvent = async (req, res) => {
+//   try {
+//     const event_id = req.params.id;
+//     const eventData = req.body;
+
+//     const updatedEvent = await Event.updateEventById(event_id, eventData); // ✅ renamed function call
+
+//     if (!updatedEvent) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Event not found or not updated",
+//       });
+//     }
+//     delete updatedEvent.updated_at;
+//     res.status(200).json({
+//       success: true,
+//       message: "Event updated successfully",
+//       data: updatedEvent,
+//     });
+//   } catch (error) {
+//     console.error("Update Error:", error.message);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to update event",
+//       error: error.message,
+//     });
+//   }
+// };
+
 const updateEvent = async (req, res) => {
   try {
     const event_id = req.params.id;
-    const eventData = req.body;
 
-    const updatedEvent = await Event.updateEventById(event_id, eventData); // ✅ renamed function call
+    const eventData = { ...req.body };
+
+    // ✅ If image is uploaded, add image_url field
+    if (req.file) {
+      eventData.image_url = "/uploads/" + req.file.filename;
+    }
+
+    const updatedEvent = await Event.updateEventById(event_id, eventData);
 
     if (!updatedEvent) {
       return res.status(404).json({
@@ -125,7 +160,9 @@ const updateEvent = async (req, res) => {
         message: "Event not found or not updated",
       });
     }
+
     delete updatedEvent.updated_at;
+
     res.status(200).json({
       success: true,
       message: "Event updated successfully",
@@ -140,6 +177,7 @@ const updateEvent = async (req, res) => {
     });
   }
 };
+
 
 const deleteEvent = async (req, res) => {
   try {
